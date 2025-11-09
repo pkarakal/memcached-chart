@@ -1,0 +1,494 @@
+## @section Global parameters
+## Global Docker image parameters
+
+global:
+  ## @param global.imageRegistry Global Docker image registry
+  imageRegistry: ""
+  ## @param global.imagePullSecrets Global Docker registry secret names as an array
+  imagePullSecrets: []
+
+## @section Common parameters
+
+## @param kubeVersion Override Kubernetes version detection
+kubeVersion: ""
+## @param nameOverride String to partially override memcached.fullname
+nameOverride: ""
+## @param fullnameOverride String to fully override memcached.fullname
+fullnameOverride: ""
+## @param clusterDomain Kubernetes cluster domain name
+clusterDomain: cluster.local
+## @param commonLabels Labels to add to all deployed objects
+commonLabels: {}
+## @param commonAnnotations Annotations to add to all deployed objects
+commonAnnotations: {}
+
+## @section Memcached parameters
+
+## Memcached image configuration
+image:
+  ## @param image.registry Memcached image registry
+  registry: docker.io
+  ## @param image.repository Memcached image repository
+  repository: memcached
+  ## @param image.tag Memcached image tag (immutable tags are recommended)
+  tag: "1.6.31-alpine"
+  ## @param image.pullPolicy Memcached image pull policy
+  ## Defaults: Always (if :latest tag) | IfNotPresent (if specific tag)
+  pullPolicy: IfNotPresent
+  ## @param image.pullSecrets Memcached image pull secrets
+  ## E.g:
+  ## pullSecrets:
+  ##   - myRegistryKeySecretName
+  pullSecrets: []
+
+
+## Authentication configuration
+auth:
+  ## @param auth.enabled Enable SASL authentication
+  enabled: false
+  ## @param auth.username Memcached SASL username
+  username: ""
+  ## @param auth.password Memcached SASL password
+  password: ""
+  ## @param auth.existingSecret Name of existing secret containing password (key: memcached-password)
+  existingSecret: ""
+
+## @param replicaCount Number of Memcached replicas to deploy
+replicaCount: 1
+
+## Memcached Memory and Performance Configuration
+memcached:
+  ## @param memcached.allocatedMemory Maximum memory to use for items in megabytes (-m flag)
+  allocatedMemory: 64
+  ## @param memcached.maxItemMemory Max item size in megabytes. Adjusts max item size from default 1MB (-I flag)
+  maxItemMemory: 1
+  ## @param memcached.connectionLimit Maximum simultaneous connections (-c flag)
+  connectionLimit: 1024
+  ## @param memcached.extendedOptions Extended memory options (-o flag)
+  ## Options: modern, no_modern, slab_reassign, slab_automove, hash_algorithm, maxconns_fast, lru_crawler, lru_maintainer
+  extendedOptions: "modern"
+  ## @param memcached.extraExtendedOptions Additional extended options to append
+  ## When persistence.enabled=true, extstore configuration is automatically added:
+  ## - ext_path={persistence.mountPath}/extstore:{size}G (size is 90% of persistence.size)
+  ## - ext_wbuf_size=16 (unless you override it here)
+  ## Use this field to add other extstore options or override defaults
+  extraExtendedOptions: ""
+  ## @param memcached.verbosity Verbosity level (v=verbose, vv=more verbose, vvv=extremely verbose)
+  verbosity: "v"
+  ## @param memcached.port Memcached port (-p flag)
+  port: 11211
+
+## Persistence configuration (note: memcached is in-memory, persistence is for extstore only)
+persistence:
+  ## @param persistence.enabled Enable persistence using Persistent Volume Claims
+  enabled: false
+  ## @param persistence.storageClass Persistent Volume storage class
+  ## If defined, storageClassName: <storageClass>
+  ## If undefined (default) or set to null, no storageClassName spec is set
+  storageClass: ""
+  ## @param persistence.annotations Additional custom annotations for the PVC
+  annotations: {}
+  ## @param persistence.labels Additional custom labels for the PVC
+  labels: {}
+  ## @param persistence.accessModes Persistent Volume access modes
+  accessModes:
+    - ReadWriteOnce
+  ## @param persistence.size Persistent Volume size
+  size: 8Gi
+  ## @param persistence.selector Selector to match an existing Persistent Volume
+  ## E.g:
+  ## selector:
+  ##   matchLabels:
+  ##     app: my-app
+  selector: {}
+  ## @param persistence.mountPath Path to mount the volume at
+  mountPath: /data
+
+## @param command Override default container command (useful when using custom images)
+command: []
+
+## @param extraArgs Additional command line arguments to pass to memcached
+## E.g:
+## extraArgs:
+##   - name: max-memory
+##     value: "512"
+extraArgs: []
+
+## Autoscaling configuration
+autoscaling:
+  ## @param autoscaling.enabled Enable Horizontal Pod Autoscaler
+  enabled: false
+  ## @param autoscaling.minReplicas Minimum number of replicas
+  minReplicas: 3
+  ## @param autoscaling.maxReplicas Maximum number of replicas
+  maxReplicas: 6
+  ## @param autoscaling.targetCPU Target CPU utilization percentage
+  targetCPU: 50
+  ## @param autoscaling.targetMemory Target Memory utilization percentage
+  targetMemory: 50
+
+## @param podLabels Extra labels for Memcached pods
+podLabels: {}
+## @param podAnnotations Annotations for Memcached pods
+podAnnotations: {}
+## @param podAffinityPreset Pod affinity preset. Allowed values: soft or hard
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+podAffinityPreset: ""
+## @param podAntiAffinityPreset Pod anti-affinity preset. Allowed values: soft or hard
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+podAntiAffinityPreset: soft
+
+## Node affinity preset
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+nodeAffinityPreset:
+  ## @param nodeAffinityPreset.type Node affinity preset type. Allowed values: soft or hard
+  type: ""
+  ## @param nodeAffinityPreset.key Node label key to match
+  key: ""
+  ## @param nodeAffinityPreset.values Node label values to match
+  values: []
+
+## @param affinity Affinity for Memcached pods assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+affinity: {}
+## @param nodeSelector Node labels for Memcached pods assignment
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+nodeSelector: {}
+## @param tolerations Tolerations for Memcached pods assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+tolerations: []
+## @param topologySpreadConstraints Topology Spread Constraints for pod assignment
+## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+topologySpreadConstraints: []
+
+## @param podManagementPolicy Statefulset Pod Management Policy Type (Parallel or OrderedReady)
+podManagementPolicy: Parallel
+## @param priorityClassName Memcached pods' priorityClassName
+priorityClassName: ""
+## @param schedulerName Name of the k8s scheduler (other than default)
+schedulerName: ""
+## @param terminationGracePeriodSeconds Seconds the pod needs to terminate gracefully
+terminationGracePeriodSeconds: 30
+
+## Update strategy
+updateStrategy:
+  ## @param updateStrategy.type Memcached statefulset strategy type (RollingUpdate or OnDelete)
+  type: RollingUpdate
+  ## @param updateStrategy.rollingUpdate Memcached statefulset rolling update configuration parameters
+  rollingUpdate: {}
+
+## @param extraEnvVars Array with extra environment variables to add to Memcached nodes
+## E.g:
+## extraEnvVars:
+##   - name: FOO
+##     value: "bar"
+extraEnvVars: []
+## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Memcached nodes
+extraEnvVarsCM: ""
+## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Memcached nodes
+extraEnvVarsSecret: ""
+
+## Liveness probe configuration
+## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe:
+  ## @param livenessProbe.enabled Enable livenessProbe on Memcached containers
+  enabled: true
+  ## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  initialDelaySeconds: 30
+  ## @param livenessProbe.periodSeconds Period seconds for livenessProbe
+  periodSeconds: 10
+  ## @param livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  timeoutSeconds: 5
+  ## @param livenessProbe.failureThreshold Failure threshold for livenessProbe
+  failureThreshold: 6
+  ## @param livenessProbe.successThreshold Success threshold for livenessProbe
+  successThreshold: 1
+
+## Readiness probe configuration
+## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+readinessProbe:
+  ## @param readinessProbe.enabled Enable readinessProbe on Memcached containers
+  enabled: true
+  ## @param readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  initialDelaySeconds: 5
+  ## @param readinessProbe.periodSeconds Period seconds for readinessProbe
+  periodSeconds: 5
+  ## @param readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  timeoutSeconds: 3
+  ## @param readinessProbe.failureThreshold Failure threshold for readinessProbe
+  failureThreshold: 6
+  ## @param readinessProbe.successThreshold Success threshold for readinessProbe
+  successThreshold: 1
+
+## Startup probe configuration
+## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+startupProbe:
+  ## @param startupProbe.enabled Enable startupProbe on Memcached containers
+  enabled: false
+  ## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+  initialDelaySeconds: 30
+  ## @param startupProbe.periodSeconds Period seconds for startupProbe
+  periodSeconds: 10
+  ## @param startupProbe.timeoutSeconds Timeout seconds for startupProbe
+  timeoutSeconds: 1
+  ## @param startupProbe.failureThreshold Failure threshold for startupProbe
+  failureThreshold: 15
+  ## @param startupProbe.successThreshold Success threshold for startupProbe
+  successThreshold: 1
+
+## @param customLivenessProbe Custom livenessProbe that overrides the default one
+customLivenessProbe: {}
+## @param customReadinessProbe Custom readinessProbe that overrides the default one
+customReadinessProbe: {}
+## @param customStartupProbe Custom startupProbe that overrides the default one
+customStartupProbe: {}
+
+## Resource requests and limits
+## Ref: https://kubernetes.io/docs/user-guide/compute-resources/
+resources:
+  ## @param resources.limits The resources limits for the Memcached containers
+  limits: {}
+  ## @param resources.requests The requested resources for the Memcached containers
+  requests:
+    memory: 256Mi
+    cpu: 250m
+
+## Configure Pods Security Context
+## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+podSecurityContext:
+  ## @param podSecurityContext.enabled Enabled Memcached pods' Security Context
+  enabled: true
+  ## @param podSecurityContext.fsGroup Set Memcached pod's Security Context fsGroup
+  fsGroup: 1001
+  ## @param podSecurityContext.seccompProfile.type Set container's Security Context seccomp profile
+  seccompProfile:
+    type: RuntimeDefault
+
+## Configure Container Security Context
+## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+containerSecurityContext:
+  ## @param containerSecurityContext.enabled Enabled Memcached containers' Security Context
+  enabled: true
+  ## @param containerSecurityContext.runAsUser Set Memcached containers' Security Context runAsUser
+  runAsUser: 11211
+  ## @param containerSecurityContext.runAsNonRoot Set Memcached containers' Security Context runAsNonRoot
+  runAsNonRoot: true
+  ## @param containerSecurityContext.allowPrivilegeEscalation Set Memcached containers' Security Context allowPrivilegeEscalation
+  allowPrivilegeEscalation: false
+  ## @param containerSecurityContext.capabilities.drop List of capabilities to be dropped
+  capabilities:
+    drop:
+      - ALL
+  ## @param containerSecurityContext.readOnlyRootFilesystem Set Memcached containers' Security Context readOnlyRootFilesystem
+  readOnlyRootFilesystem: true
+
+## @param lifecycleHooks for the Memcached container(s) to automate configuration before or after startup
+lifecycleHooks: {}
+## @param extraVolumes Optionally specify extra list of additional volumes for the Memcached pod(s)
+extraVolumes: []
+## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Memcached container(s)
+extraVolumeMounts: []
+## @param sidecars Add additional sidecar containers to the Memcached pod(s)
+sidecars: []
+## @param initContainers Add additional init containers to the Memcached pod(s)
+initContainers: []
+
+## ServiceAccount configuration
+serviceAccount:
+  ## @param serviceAccount.create Specifies whether a ServiceAccount should be created
+  create: true
+  ## @param serviceAccount.name The name of the ServiceAccount to use
+  ## If not set and create is true, a name is generated using the fullname template
+  name: ""
+  ## @param serviceAccount.automountServiceAccountToken Whether to auto mount the service account token
+  automountServiceAccountToken: false
+  ## @param serviceAccount.annotations Additional custom annotations for the ServiceAccount
+  annotations: {}
+
+## @section Traffic Exposure Parameters
+
+## Memcached service parameters
+service:
+  ## @param service.type Memcached service type
+  type: ClusterIP
+  ## @param service.ports.memcached Memcached service port
+  ports:
+    memcached: 11211
+  ## @param service.nodePorts.memcached Node port for Memcached (only if service.type is NodePort or LoadBalancer)
+  nodePorts:
+    memcached: ""
+  ## @param service.sessionAffinity Control where client requests go, to the same pod or round-robin
+  ## Values: ClientIP or None
+  sessionAffinity: None
+  ## @param service.sessionAffinityConfig Additional settings for sessionAffinity
+  sessionAffinityConfig: {}
+  ## @param service.clusterIP Memcached service Cluster IP
+  ## Set to "" for non-headless service
+  clusterIP: None
+  ## @param service.loadBalancerIP Memcached service Load Balancer IP
+  ## Set the LoadBalancer service type to internal only
+  loadBalancerIP: ""
+  ## @param service.loadBalancerSourceRanges Memcached service Load Balancer sources
+  loadBalancerSourceRanges: []
+  ## @param service.externalTrafficPolicy Memcached service external traffic policy
+  ## Ref: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+  externalTrafficPolicy: Cluster
+  ## @param service.annotations Additional custom annotations for Memcached service
+  annotations: {}
+  ## @param service.extraPorts Extra ports to expose in Memcached service (normally used with the `sidecars` value)
+  extraPorts: []
+  ## Headless service properties
+  headless:
+    ## @param service.headless.annotations Annotations for the headless service
+    annotations: {}
+
+## @section Metrics Parameters
+
+## Prometheus metrics configuration
+metrics:
+  ## @param metrics.enabled Enable exposing Memcached metrics to be gathered by Prometheus
+  enabled: false
+  ## Prometheus exporter image
+  image:
+    ## @param metrics.image.registry Memcached exporter image registry
+    registry: docker.io
+    ## @param metrics.image.repository Memcached exporter image repository
+    repository: prom/memcached-exporter
+    ## @param metrics.image.tag Memcached exporter image tag (immutable tags are recommended)
+    tag: v0.14.4
+    ## @param metrics.image.pullPolicy Memcached exporter image pull policy
+    pullPolicy: IfNotPresent
+    ## @param metrics.image.pullSecrets Memcached exporter image pull secrets
+    pullSecrets: []
+  ## @param metrics.containerPort Memcached exporter metrics container port
+  containerPort: 9150
+  ## Memcached exporter resource requests and limits
+  ## Ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  resources:
+    ## @param metrics.resources.limits The resources limits for the Memcached exporter container
+    limits: {}
+    ## @param metrics.resources.requests The requested resources for the Memcached exporter container
+    requests: {}
+  ## Memcached exporter container security context
+  ## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  containerSecurityContext:
+    ## @param metrics.containerSecurityContext.enabled Enabled Memcached exporter containers' Security Context
+    enabled: true
+    ## @param metrics.containerSecurityContext.runAsUser Set Memcached exporter containers' Security Context runAsUser
+    runAsUser: 1001
+    ## @param metrics.containerSecurityContext.runAsNonRoot Set Memcached exporter containers' Security Context runAsNonRoot
+    runAsNonRoot: true
+    ## @param metrics.containerSecurityContext.allowPrivilegeEscalation Set Memcached exporter containers' Security Context allowPrivilegeEscalation
+    allowPrivilegeEscalation: false
+    ## @param metrics.containerSecurityContext.capabilities.drop List of capabilities to be dropped
+    capabilities:
+      drop:
+        - ALL
+    ## @param metrics.containerSecurityContext.readOnlyRootFilesystem Set Memcached exporter containers' Security Context readOnlyRootFilesystem
+    readOnlyRootFilesystem: true
+  ## Memcached exporter service parameters
+  service:
+    ## @param metrics.service.type Memcached exporter service type
+    type: ClusterIP
+    ## @param metrics.service.port Memcached exporter service port
+    port: 9150
+    ## @param metrics.service.annotations Annotations for the Memcached exporter service
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "{{ .Values.metrics.service.port }}"
+  ## ServiceMonitor configuration for Prometheus Operator
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled Create ServiceMonitor resource for scraping metrics using Prometheus Operator
+    enabled: false
+    ## @param metrics.serviceMonitor.namespace The namespace in which the ServiceMonitor will be created
+    namespace: ""
+    ## @param metrics.serviceMonitor.interval The interval at which metrics should be scraped
+    interval: 30s
+    ## @param metrics.serviceMonitor.scrapeTimeout The timeout after which the scrape is ended
+    scrapeTimeout: ""
+    ## @param metrics.serviceMonitor.relabelings Metrics relabelings to add to the scrape endpoint
+    relabelings: []
+    ## @param metrics.serviceMonitor.metricRelabelings Metrics relabelings to add to the scrape endpoint
+    metricRelabelings: []
+    ## @param metrics.serviceMonitor.honorLabels Specify honorLabels parameter to add the scrape endpoint
+    honorLabels: false
+    ## @param metrics.serviceMonitor.additionalLabels Additional labels that can be used so ServiceMonitor resource(s) can be discovered by Prometheus
+    additionalLabels: {}
+    ## @param metrics.serviceMonitor.jobLabel The name of the label on the target service to use as the job name in Prometheus
+    jobLabel: ""
+
+## @section RBAC Parameters
+
+rbac:
+  ## @param rbac.create Create RBAC resources (Role, RoleBinding, ClusterRole, ClusterRoleBinding)
+  ##
+  create: true
+  ## @param rbac.rules Additional rules for ClusterRole
+  ## E.g:
+  ## rules:
+  ##   - apiGroups: [""]
+  ##     resources: ["configmaps"]
+  ##     verbs: ["get", "list"]
+  ##
+  rules: []
+  ## @param rbac.roleRules Additional rules for Role (namespace-scoped)
+  ## E.g:
+  ## roleRules:
+  ##   - apiGroups: [""]
+  ##     resources: ["configmaps"]
+  ##     verbs: ["get", "list"]
+  ##
+  roleRules: []
+
+## @section Network Policy Parameters
+
+networkPolicy:
+  ## @param networkPolicy.enabled Enable NetworkPolicy for Memcached
+  ##
+  enabled: false
+  ## @param networkPolicy.allowIngress Allow inbound traffic to Memcached
+  ##
+  allowIngress: true
+  ## @param networkPolicy.allowEgress Allow outbound traffic from Memcached
+  ##
+  allowEgress: false
+  ## @param networkPolicy.podSelector PodSelector for the NetworkPolicy (uses memcached labels by default)
+  ## E.g:
+  ## podSelector:
+  ##   matchLabels:
+  ##     app: memcached
+  ##
+  podSelector: {}
+  ## @param networkPolicy.ingress Array of ingress rules
+  ## Each rule can have 'from' (podSelector/namespaceSelector) and 'ports' (protocol/port)
+  ## E.g:
+  ## ingress:
+  ##   - from:
+  ##       - podSelector:
+  ##           matchLabels:
+  ##             app: my-app
+  ##     protocol: TCP
+  ##     port: 11211
+  ##
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: memcached
+      protocol: TCP
+      port: 11211
+  ## @param networkPolicy.egress Array of egress rules
+  ## Each rule can have 'to' (podSelector/namespaceSelector) and 'ports' (protocol/port)
+  ## E.g:
+  ## egress:
+  ##   - to:
+  ##       - namespaceSelector: {}
+  ##     ports:
+  ##       - protocol: TCP
+  ##         port: 443
+  ##       - protocol: UDP
+  ##         port: 53
+  ##
+  egress:
+    - to:
+        - namespaceSelector: {}

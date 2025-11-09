@@ -1,0 +1,36 @@
+{{- if not (eq .Values.service.type "ClusterIP" | and (not (eq .Values.service.clusterIP "None"))) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "memcached.fullname" . }}-headless
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "memcached.labels" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+    {{- toYaml .Values.commonLabels | nindent 4 }}
+    {{- end }}
+  {{- if or .Values.service.headless.annotations .Values.commonAnnotations }}
+  annotations:
+    {{- if .Values.service.headless.annotations }}
+    {{- toYaml .Values.service.headless.annotations | nindent 4 }}
+    {{- end }}
+    {{- if .Values.commonAnnotations }}
+    {{- toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - name: memcached
+      port: {{ .Values.service.ports.memcached }}
+      targetPort: memcached
+      protocol: TCP
+    {{- if .Values.metrics.enabled }}
+    - name: metrics
+      port: {{ .Values.metrics.service.port }}
+      targetPort: metrics
+      protocol: TCP
+    {{- end }}
+  selector: {{- include "memcached.selectorLabels" . | nindent 4 }}
+{{- end }}

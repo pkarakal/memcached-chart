@@ -1,0 +1,15 @@
+apiVersion: v2
+name: memcached
+description: A high-performance, distributed memory object caching system
+type: application
+version: 0.1.0
+appVersion: "1.6.31"
+keywords:
+  - memcached
+  - cache
+home: https://memcached.org/
+sources:
+  - https://github.com/memcached/memcached
+maintainers:
+  - name: Pavlos Karakalidis
+

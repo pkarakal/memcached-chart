@@ -1,0 +1,27 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "memcached.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "memcached.labels" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+    {{- toYaml .Values.commonLabels | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- toYaml .Values.commonAnnotations | nindent 4 }}
+  {{- end }}
+rules:
+  {{- if .Values.rbac.roleRules }}
+  {{- toYaml .Values.rbac.roleRules | nindent 2 }}
+  {{- else }}
+  # Minimal permissions for Memcached in current namespace
+  - apiGroups: [ "" ]
+    resources: [ "configmaps" ]
+    verbs: [ "get", "list", "watch" ]
+  - apiGroups: [ "" ]
+    resources: [ "secrets" ]
+    resourceNames: [ "{{ include "memcached.secretName" . }}" ]
+    verbs: [ "get" ]
+  {{- end }}
+{{- end }}

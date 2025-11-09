@@ -1,0 +1,336 @@
+## @section Production Configuration for Memcached
+##
+## This is a production-ready configuration file with optimized settings
+##
+## Key Production Features:
+## - High availability with multiple replicas
+## - Hard pod anti-affinity for better fault tolerance
+## - Enhanced resource limits and requests
+## - Horizontal Pod Autoscaling enabled
+## - Prometheus metrics and ServiceMonitor enabled
+## - Topology spread constraints for zone/node distribution
+## - Persistence enabled for extended storage (extstore)
+##
+
+## @param replicaCount Number of Memcached replicas for high availability
+## Increase this for better availability and load distribution
+## Recommended: 3-5 for production, 10-15+ for large scale deployments
+replicaCount: 3
+
+## @param podAntiAffinityPreset Pod anti-affinity preset to spread pods across nodes
+## Values: soft (preferred) or hard (required)
+## Hard anti-affinity ensures pods are never co-located on the same node
+podAntiAffinityPreset: hard
+
+## Resource Configuration
+## Define resource requests and limits for production workloads
+## Ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+resources:
+  ## @param resources.limits Resource limits for Memcached container
+  ## Limits define the maximum resources a container can use
+  limits:
+    ## @param resources.limits.memory Maximum memory allocation
+    ## Should be higher than requests to allow for burst capacity
+    memory: 2Gi
+    ## @param resources.limits.cpu Maximum CPU allocation in millicores
+    ## 1000m = 1 CPU core
+    cpu: 1000m
+  ## @param resources.requests Resource requests for Memcached container
+  ## Requests define the guaranteed resources for scheduling
+  requests:
+    ## @param resources.requests.memory Guaranteed memory allocation
+    ## Set based on expected baseline usage
+    memory: 1Gi
+    ## @param resources.requests.cpu Guaranteed CPU allocation in millicores
+    ## 500m = 0.5 CPU cores
+    cpu: 500m
+
+## @section Memcached Configuration
+## Enhanced production configuration
+memcached:
+  ## @param memcached.allocatedMemory Memory allocated for memcached cache in megabytes
+  ## This is the main cache memory (in-memory storage)
+  ## Adjust based on your workload requirements:
+  ## - Small deployments: 256-512 MB
+  ## - Medium deployments: 512-1024 MB
+  ## - Large deployments: 1024-4096 MB
+  ## - Very large deployments: 4096+ MB
+  ## Note: Should be less than container memory limit
+  allocatedMemory: 1536
+
+  ## @param memcached.maxItemMemory Maximum size per item in megabytes
+  ## Default is 1 MB, increase for larger objects
+  ## Common values:
+  ## - 1 MB: Default, suitable for most use cases
+  ## - 5-10 MB: Medium-sized objects
+  ## - 10-50 MB: Large objects (images, documents)
+  maxItemMemory: 10
+
+  ## @param memcached.connectionLimit Maximum concurrent connections
+  ## Increase for high-concurrency production environments
+  ## Guidelines:
+  ## - Small: 1024 connections
+  ## - Medium: 2048 connections
+  ## - Large: 4096+ connections
+  connectionLimit: 2048
+
+  ## @param memcached.extendedOptions Extended memory and performance options
+  ## Available options:
+  ## - modern: Uses modern protocol defaults and performance optimizations
+  ## - track_sizes: Tracks per-command statistics (useful for monitoring/debugging)
+  ## - maxconns_fast: Close connections after accepting them for immediate reuse
+  ## - lru_crawler: Enable LRU crawler for better memory management
+  ## - lru_maintainer: Background thread for LRU maintenance
+  extendedOptions: "modern,track_sizes"
+
+  ## @param memcached.extraExtendedOptions Additional extended options for external storage
+  ## Additional options to append to extendedOptions
+  ## When persistence.enabled=true, extstore is automatically configured:
+  ## - ext_path is set to {persistence.mountPath}/extstore:{calculated_size}G
+  ## - ext_wbuf_size=16 is added automatically (can be overridden here)
+  ## - calculated_size is 90% of persistence.size to allow filesystem overhead
+  ##
+  ## You can add other extstore options here:
+  ## - ext_threads: Number of IO threads (default: 1, increase for high IOPS)
+  ## - ext_wbuf_size: Override default write buffer (default: 16MB when auto-configured)
+  ## - ext_item_size: Minimum item size to store in extstore (default: uses -I setting)
+  ## - ext_item_age: Minimum age before moving to extstore (default: no age limit)
+  ## - ext_max_sleep: Max time for IO threads to sleep (microseconds)
+  ## - ext_recache_rate: Rate to recache items from extstore (items/sec)
+  ##
+  ## Example to increase IO threads:
+  ## extraExtendedOptions: "ext_threads=4"
+  ##
+  ## NOTE: Do NOT specify ext_path here - it's automatically configured from persistence settings
+  extraExtendedOptions: ""
+
+  ## @param memcached.verbosity Logging verbosity level
+  ## Options:
+  ## - "" (empty): Quiet mode, minimal logging
+  ## - "v": Verbose, logs important events (recommended for production)
+  ## - "vv": Very verbose, detailed logging
+  ## - "vvv": Extremely verbose, debug-level logging
+  verbosity: "v"
+
+  ## @param memcached.port Memcached listening port
+  ## Default: 11211 (standard Memcached port)
+  port: 11211
+
+## @section Persistence Configuration
+## Enable persistent storage for Memcached extstore feature
+## Extstore allows Memcached to extend cache to disk for larger datasets
+## Ref: https://github.com/memcached/memcached/wiki/Extstore
+persistence:
+  ## @param persistence.enabled Enable persistence using Persistent Volume Claims
+  ## MUST be enabled when using memcached.extraExtendedOptions with ext_path
+  ## Provides disk-backed storage for extended cache capacity
+  enabled: true
+  ## @param persistence.storageClass Persistent Volume storage class
+  ## Leave empty to use the default storage class
+  ## Examples: "standard", "fast-ssd", "ebs-sc", "ceph-rbd"
+  storageClass: ""
+  ## @param persistence.size Persistent Volume size
+  ## Must match or exceed the size specified in extraExtendedOptions (50G)
+  ## Recommended: Add 10-20% overhead for filesystem metadata
+  ## Examples: 10Gi, 50Gi, 100Gi, 500Gi
+  size: 50Gi
+  ## @param persistence.mountPath Path where the volume will be mounted
+  ## Must match the path specified in extraExtendedOptions ext_path
+  ## Default: /data (used in ext_path=/data/extstore:50G)
+  mountPath: /data
+  ## @param persistence.accessModes Persistent Volume access modes
+  ## ReadWriteOnce: Volume can be mounted as read-write by a single node
+  ## Suitable for StatefulSet with one pod per volume
+  accessModes:
+    - ReadWriteOnce
+
+## @section Extra Arguments Configuration
+## @param extraArgs Additional command-line arguments for Memcached
+## Use this to pass additional flags to the memcached binary
+## Format: Array of key-value pairs
+## Common production arguments:
+## - idle_timeout: Close connections idle for this many seconds (default: 0 = disabled)
+## - no_relisten: Disable automatic rebinding after network errors
+## - disable_cas: Disable CAS (Compare-And-Swap) command
+## - disable_flush: Disable flush_all command for security
+##
+## Examples:
+extraArgs: []
+## Uncomment to enable idle timeout (15 minutes):
+# extraArgs:
+#   - key: "idle_timeout"
+#     value: "900"
+## Uncomment to disable automatic rebinding:
+#   - key: "no_relisten"
+#     value: ""
+## Uncomment to disable flush_all command for security:
+#   - key: "disable_flush"
+#     value: ""
+
+## @section Metrics and Monitoring Configuration
+## Prometheus metrics exporter configuration
+metrics:
+  ## @param metrics.enabled Enable Prometheus metrics exporter sidecar
+  ## Deploys prom/memcached-exporter as a sidecar container
+  enabled: true
+  ## Metrics exporter image configuration
+  image:
+    ## @param metrics.image.repository Memcached exporter image repository
+    repository: prom/memcached-exporter
+    ## @param metrics.image.tag Memcached exporter image tag
+    ## Check https://github.com/prometheus/memcached_exporter/releases for latest
+    tag: v0.14.4
+  ## @param metrics.containerPort Port where metrics are exposed
+  ## Default Prometheus exporter port
+  containerPort: 9150
+  ## @param metrics.resources Resource limits and requests for metrics exporter
+  ## Keep this lightweight as it's just for metrics collection
+  resources:
+    ## @param metrics.resources.limits Maximum resources for exporter
+    limits:
+      memory: 256Mi
+      cpu: 200m
+    ## @param metrics.resources.requests Guaranteed resources for exporter
+    requests:
+      memory: 128Mi
+      cpu: 100m
+  ## ServiceMonitor configuration for Prometheus Operator
+  ## Ref: https://github.com/prometheus-operator/prometheus-operator
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled Create ServiceMonitor resource
+    ## Requires Prometheus Operator to be installed
+    enabled: true
+    ## @param metrics.serviceMonitor.interval How often to scrape metrics
+    ## Common values: 15s, 30s, 60s
+    interval: 30s
+    ## @param metrics.serviceMonitor.additionalLabels Labels to help Prometheus discover this ServiceMonitor
+    ## Must match your Prometheus serviceMonitorSelector configuration
+    additionalLabels:
+      prometheus: kube-prometheus
+
+## @section Autoscaling Configuration
+## Horizontal Pod Autoscaler (HPA) for dynamic scaling
+## Ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+autoscaling:
+  ## @param autoscaling.enabled Enable Horizontal Pod Autoscaler
+  ## Automatically scales replicas based on CPU and memory usage
+  enabled: true
+  ## @param autoscaling.minReplicas Minimum number of replicas
+  ## Should match or be close to replicaCount for production stability
+  minReplicas: 3
+  ## @param autoscaling.maxReplicas Maximum number of replicas
+  ## Set based on cluster capacity and expected maximum load
+  ## Common values: 10-20 for medium scale, 50+ for large scale
+  maxReplicas: 15
+  ## @param autoscaling.targetCPU Target CPU utilization percentage
+  ## Scale up when average CPU exceeds this threshold
+  ## 70-80% is recommended for production to handle spikes
+  targetCPU: 70
+  ## @param autoscaling.targetMemory Target Memory utilization percentage
+  ## Scale up when average memory exceeds this threshold
+  ## 80% allows for some burst capacity
+  targetMemory: 80
+
+## @section Topology and Distribution Configuration
+## @param topologySpreadConstraints Topology spread constraints for better pod distribution
+## Ensures pods are distributed across zones and nodes for high availability
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/
+##
+## This configuration ensures:
+## 1. Pods are spread across different availability zones (zone constraint)
+## 2. Pods are spread across different nodes (hostname constraint)
+## 3. DoNotSchedule ensures pods won't be scheduled if constraints can't be met
+topologySpreadConstraints:
+  ## Zone-level distribution constraint
+  ## @param topologySpreadConstraints[0].maxSkew Maximum allowed difference in pod count between zones
+  ## maxSkew: 1 means zones should have equal or near-equal number of pods
+  - maxSkew: 1
+    ## @param topologySpreadConstraints[0].topologyKey Topology key for zone distribution
+    topologyKey: topology.kubernetes.io/zone
+    ## @param topologySpreadConstraints[0].whenUnsatisfiable Action when constraint cannot be satisfied
+    ## DoNotSchedule: Don't schedule the pod (strict enforcement)
+    ## ScheduleAnyway: Try to meet constraint but schedule anyway (soft enforcement)
+    whenUnsatisfiable: DoNotSchedule
+    ## @param topologySpreadConstraints[0].labelSelector Label selector to identify related pods
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: memcached
+  ## Node-level distribution constraint
+  ## @param topologySpreadConstraints[1].maxSkew Maximum allowed difference in pod count between nodes
+  - maxSkew: 1
+    ## @param topologySpreadConstraints[1].topologyKey Topology key for node distribution
+    topologyKey: kubernetes.io/hostname
+    ## @param topologySpreadConstraints[1].whenUnsatisfiable Action when constraint cannot be satisfied
+    whenUnsatisfiable: DoNotSchedule
+    ## @param topologySpreadConstraints[1].labelSelector Label selector to identify related pods
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: memcached
+
+## @section Pod Labels and Annotations
+## @param podLabels Additional labels for Memcached pods
+## Useful for monitoring, organization, and service discovery
+## These labels help with:
+## - Identifying environment in monitoring dashboards
+## - Filtering logs and metrics
+## - Service mesh integration
+## - Cost tracking and resource attribution
+podLabels:
+  environment: production
+  tier: cache
+
+## @section Health Check Configuration
+## @param livenessProbe Liveness probe configuration
+## Kubernetes restarts the pod if this probe fails
+## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe:
+  ## @param livenessProbe.enabled Enable liveness probe
+  enabled: true
+  ## @param livenessProbe.initialDelaySeconds Initial delay before probe starts
+  ## Give Memcached time to start up
+  initialDelaySeconds: 30
+  ## @param livenessProbe.periodSeconds How often to perform the probe
+  periodSeconds: 10
+  ## @param livenessProbe.timeoutSeconds Timeout for the probe
+  timeoutSeconds: 5
+  ## @param livenessProbe.failureThreshold Number of failures before restarting
+  ## 6 failures = 60 seconds before restart (with 10s period)
+  failureThreshold: 6
+
+## @param readinessProbe Readiness probe configuration
+## Kubernetes removes pod from service endpoints if this probe fails
+readinessProbe:
+  ## @param readinessProbe.enabled Enable readiness probe
+  enabled: true
+  ## @param readinessProbe.initialDelaySeconds Initial delay before probe starts
+  ## Shorter than liveness as readiness checks if cache is ready to serve
+  initialDelaySeconds: 5
+  ## @param readinessProbe.periodSeconds How often to perform the probe
+  periodSeconds: 5
+  ## @param readinessProbe.timeoutSeconds Timeout for the probe
+  timeoutSeconds: 3
+  ## @param readinessProbe.failureThreshold Number of failures before marking unready
+  ## 3 failures = 15 seconds before removing from endpoints
+  failureThreshold: 3
+
+## @section Service Configuration
+## @param service Kubernetes Service configuration
+service:
+  ## @param service.type Service type (ClusterIP for internal access)
+  type: ClusterIP
+  ## @param service.annotations Service annotations
+  ## topology-aware-hints enables topology-aware routing for better latency
+  ## Ref: https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/
+  annotations:
+    service.kubernetes.io/topology-aware-hints: auto
+
+## @section Pod Management Configuration
+## @param terminationGracePeriodSeconds Grace period for pod termination
+## Allows time for connections to drain and cache to flush
+## 60 seconds is recommended for production to ensure clean shutdown
+terminationGracePeriodSeconds: 60
+
+## @param podManagementPolicy StatefulSet pod management policy
+## Parallel: Start/stop all pods simultaneously (faster scaling)
+## OrderedReady: Start/stop pods in order (0, 1, 2...)
+podManagementPolicy: Parallel

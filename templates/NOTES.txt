@@ -1,0 +1,37 @@
+
+** Please be patient while the chart is being deployed **
+
+Memcached can be accessed via port {{ .Values.service.ports.memcached }} on the following DNS name from within your cluster:
+    {{- if eq .Values.service.clusterIP "None" }}
+    {{ include "memcached.fullname" . }}-headless.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
+    {{- else }}
+    {{ include "memcached.fullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
+    {{- end }}
+
+To connect to your Memcached server:
+
+1. Run a pod that you can use as a client:
+
+    kubectl run --namespace {{ .Release.Namespace }} {{ include "memcached.fullname" . }}-client --rm --tty -i --restart='Never' --image {{ include "memcached.image" . }} -- sh
+
+2. From within the pod, connect to Memcached using telnet:
+    {{- if eq .Values.service.clusterIP "None" }}
+    telnet {{ include "memcached.fullname" . }}-headless.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }} {{ .Values.service.ports.memcached }}
+    {{- else }}
+    telnet {{ include "memcached.fullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }} {{ .Values.service.ports.memcached }}
+    {{- end }}
+
+{{- if .Values.metrics.enabled }}
+
+To access the Prometheus metrics:
+
+    {{ include "memcached.fullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:{{ .Values.metrics.service.port }}/metrics
+
+{{- if .Values.metrics.serviceMonitor.enabled }}
+
+The ServiceMonitor has been created for Prometheus Operator integration.
+
+{{- end }}
+{{- end }}
+
+{{- include "memcached.validateValues" . }}

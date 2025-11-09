@@ -1,0 +1,89 @@
+name: Publish Helm chart to GitHub OCI Registry
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+
+      - name: Lint Helm chart
+        run: |
+          # Lint the chart to catch chart issues early (per Helm registries docs)
+          helm lint .
+
+      - name: Build chart dependencies
+        run: |
+          # If Chart.yaml has dependencies, this will download/build them
+          helm dependency build .
+
+      - name: Determine chart version
+        id: version
+        run: |
+          # If this run came from a tag like v1.2.3, use that as the chart version
+          if [ -n "$GITHUB_REF" ] && [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG=${GITHUB_REF#refs/tags/}
+            VERSION=${TAG#v}
+            echo "tag_version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Using tag version: $VERSION"
+          else
+            # Fallback: read version from Chart.yaml using awk (no extra deps)
+            VERSION=$(awk '/^version:[[:space:]]*/ {print $2; exit}' Chart.yaml || true)
+            if [ -z "$VERSION" ]; then
+              echo "Could not determine chart version from tag or Chart.yaml" >&2
+              exit 1
+            fi
+            echo "tag_version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Using Chart.yaml version: $VERSION"
+          fi
+
+      - name: Login to GitHub Container Registry
+        env:
+          REGISTRY: ghcr.io
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          echo "Logging in to $REGISTRY"
+          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login $REGISTRY -u $OWNER --password-stdin
+
+      - name: Package chart as OCI artifact
+        working-directory: .
+        run: |
+          VERSION=${{ steps.version.outputs.tag_version }}
+          CHART_NAME=$(awk '/^name:[[:space:]]*/ {print $2; exit}' Chart.yaml)
+          echo "Packaging chart $CHART_NAME version $VERSION"
+          # Create a .tgz package (helm package reads version from Chart.yaml)
+          helm package . --destination .
+          TAR_FILE="${CHART_NAME}-${VERSION}.tgz"
+          if [ ! -f "$TAR_FILE" ]; then
+            echo "Expected package $TAR_FILE not found" >&2
+            exit 1
+          fi
+
+      - name: Push chart to GHCR
+        run: |
+          VERSION=${{ steps.version.outputs.tag_version }}
+          CHART_NAME=$(awk '/^name:[[:space:]]*/ {print $2; exit}' Chart.yaml)
+          TAR_FILE="${CHART_NAME}-${VERSION}.tgz"
+          echo "Pushing $TAR_FILE to oci://ghcr.io/${{ github.repository }}"
+          helm push "$TAR_FILE" "oci://ghcr.io/${{ github.repository }}"
+
+      - name: Verify pushed chart
+        run: |
+          VERSION=${{ steps.version.outputs.tag_version }}
+          echo "Pushed: oci://ghcr.io/${{ github.repository }} (chart ${CHART_NAME}:${VERSION})"
