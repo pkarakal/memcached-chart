@@ -73,11 +73,11 @@ are documented with comments in the `values.yaml` file.
 
 ### Memcached Image Parameters
 
-| Parameter             | Description                                      | Default           |
-|-----------------------|--------------------------------------------------|-------------------|
+| Parameter             | Description                                      | Default         |
+|-----------------------|--------------------------------------------------|-----------------|
 | `image.registry`    | Memcached image registry                         | `docker.io`     |
 | `image.repository`  | Memcached image repository                       | `memcached`     |
-| `image.tag`         | Memcached image tag (immutable tags recommended) | `1.6.31-alpine` |
+| `image.tag`         | Memcached image tag (immutable tags recommended) | `1.6.39-alpine` |
 | `image.pullPolicy`  | Image pull policy                                | `IfNotPresent`  |
 | `image.pullSecrets` | Memcached image pull secrets                     | `[]`            |
 
