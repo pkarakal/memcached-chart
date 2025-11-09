@@ -7,8 +7,8 @@ components.
 
 ### Key Changes from Bitnami:
 
-1. **Image**: Official `memcached:1.6.31-alpine` from Docker Hub
-2. **Exporter**: `prom/memcached-exporter:v0.14.4` from Docker Hub
+1. **Image**: Official `memcached:1.6.39-alpine` from Docker Hub
+2. **Exporter**: `prom/memcached-exporter:v0.15.4` from Docker Hub
 3. **Service**: Headless service by default for StatefulSet pattern
 4. **No Dependencies**: Removed Bitnami common library
 
@@ -103,7 +103,7 @@ my-cache-memcached-headless.default.svc.cluster.local:11211
 
 ```bash
 # Run a test pod
-kubectl run -it --rm memcached-client --image=memcached:1.6.31-alpine -- sh
+kubectl run -it --rm memcached-client --image=memcached:1.6.39-alpine -- sh
 
 # Inside the pod, test connection
 telnet my-cache-memcached-headless.default.svc.cluster.local 11211

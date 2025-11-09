@@ -31,7 +31,7 @@ image:
   ## @param image.repository Memcached image repository
   repository: memcached
   ## @param image.tag Memcached image tag (immutable tags are recommended)
-  tag: "1.6.31-alpine"
+  tag: "1.6.39-alpine"
   ## @param image.pullPolicy Memcached image pull policy
   ## Defaults: Always (if :latest tag) | IfNotPresent (if specific tag)
   pullPolicy: IfNotPresent
@@ -355,7 +355,7 @@ metrics:
     ## @param metrics.image.repository Memcached exporter image repository
     repository: prom/memcached-exporter
     ## @param metrics.image.tag Memcached exporter image tag (immutable tags are recommended)
-    tag: v0.14.4
+    tag: v0.15.4
     ## @param metrics.image.pullPolicy Memcached exporter image pull policy
     pullPolicy: IfNotPresent
     ## @param metrics.image.pullSecrets Memcached exporter image pull secrets
